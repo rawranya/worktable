@@ -88,6 +88,7 @@ input:focus, select:focus {
     margin-top: 5px;
     font-size: 14px;
     font-weight: 500;
+    
 }
 
 .cards-container {
@@ -175,4 +176,10 @@ ul#totalHours li {
 
 .modal-content input[type=checkbox] {
     margin-right: 10px;
+}
+
+
+option {
+  color: #fff;
+  background-color: #1e1e2f;
 }
