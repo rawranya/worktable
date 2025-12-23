@@ -1,8 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-let people = [];
-let records = [];
+/* =========================
+   LOCAL STORAGE KEYS
+========================= */
+const PEOPLE_KEY = 'future_people';
+const RECORDS_KEY = 'future_records';
 
+/* =========================
+   DATA (LOAD)
+========================= */
+let people = JSON.parse(localStorage.getItem(PEOPLE_KEY)) || [];
+let records = JSON.parse(localStorage.getItem(RECORDS_KEY)) || [];
+
+/* =========================
+   ELEMENTS
+========================= */
 const personSelect = document.getElementById('person');
 const newPersonInput = document.getElementById('newPerson');
 const addPersonBtn = document.getElementById('addPersonBtn');
@@ -23,6 +35,9 @@ const recordsCards = document.getElementById('recordsCards');
 const totalHoursList = document.getElementById('totalHours');
 const exportBtn = document.getElementById('exportBtn');
 
+/* =========================
+   TASKS
+========================= */
 const taskList = [
   "Vybrat kontejnery","Manipulace kontejneru","Demontáž a montáž panely",
   "Demontáž a montáž příček","Výměna vaty(panely)","Výměna vaty(rohy kontejnerů, sloupy kontejnerů)",
@@ -34,7 +49,20 @@ const taskList = [
 
 let selectedTasks = [];
 
-// --- Рендер задач в модалке ---
+/* =========================
+   SAVE FUNCTIONS
+========================= */
+function savePeople() {
+  localStorage.setItem(PEOPLE_KEY, JSON.stringify(people));
+}
+
+function saveRecords() {
+  localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+}
+
+/* =========================
+   TASKS MODAL
+========================= */
 function renderTasksModal() {
   tasksCheckboxesDiv.innerHTML = '';
   taskList.forEach(task => {
@@ -48,7 +76,9 @@ function renderTasksModal() {
   });
 }
 
-// --- Обновление select и отображение выбранного человека ---
+/* =========================
+   PERSON SELECT
+========================= */
 function updatePersonSelect(){
   personSelect.innerHTML='';
   people.forEach(p=>{
@@ -64,11 +94,11 @@ function updateSelectedPerson(){
   selectedPersonDiv.innerHTML = `Vybraná osoba: <span>${personSelect.value || 'nikdo'}</span>`;
 }
 
-// --- Добавление человека ---
 addPersonBtn.addEventListener('click',()=>{
   const name = newPersonInput.value.trim();
   if(name && !people.includes(name)){
     people.push(name);
+    savePeople();                // ← сохранение
     updatePersonSelect();
     newPersonInput.value='';
   }
@@ -76,19 +106,28 @@ addPersonBtn.addEventListener('click',()=>{
 
 personSelect.addEventListener('change',updateSelectedPerson);
 
-// --- Модальное окно выбора работы ---
+/* =========================
+   TASKS MODAL EVENTS
+========================= */
 openTasksBtn.addEventListener('click',()=>{
   renderTasksModal();
   tasksModal.classList.remove('hidden');
 });
 
 saveTasksBtn.addEventListener('click',()=>{
-  selectedTasks = Array.from(tasksCheckboxesDiv.querySelectorAll('input:checked')).map(cb=>cb.value);
-  selectedTasksDiv.textContent = selectedTasks.length>0 ? selectedTasks.join(', ') : 'Žádná práce vybrána';
+  selectedTasks = Array.from(
+    tasksCheckboxesDiv.querySelectorAll('input:checked')
+  ).map(cb=>cb.value);
+
+  selectedTasksDiv.textContent =
+    selectedTasks.length>0 ? selectedTasks.join(', ') : 'Žádná práce vybrána';
+
   tasksModal.classList.add('hidden');
 });
 
-// --- Добавление записи ---
+/* =========================
+   ADD RECORD
+========================= */
 addRecordBtn.addEventListener('click',()=>{
   const person = personSelect.value;
   const date = dateInput.value;
@@ -101,10 +140,13 @@ addRecordBtn.addEventListener('click',()=>{
   }
 
   records.push({person,date,tasks:[...selectedTasks],hours,comment});
+  saveRecords();                 // ← сохранение
   renderRecords();
 });
 
-// --- Рендер карточек ---
+/* =========================
+   RENDER RECORDS
+========================= */
 function renderRecords(){
   recordsCards.innerHTML='';
   records.forEach((r,i)=>{
@@ -125,6 +167,7 @@ function renderRecords(){
     btn.onclick=()=>{
       const i=parseInt(btn.dataset.index);
       records.splice(i,1);
+      saveRecords();             // ← сохранение
       renderRecords();
     };
   });
@@ -132,6 +175,9 @@ function renderRecords(){
   updateTotalHours();
 }
 
+/* =========================
+   TOTAL HOURS
+========================= */
 function updateTotalHours(){
   const totals={};
   records.forEach(r=>totals[r.person]=(totals[r.person]||0)+r.hours);
@@ -143,15 +189,28 @@ function updateTotalHours(){
   }
 }
 
-// --- Экспорт ---
+/* =========================
+   EXPORT
+========================= */
 exportBtn.addEventListener('click',()=>{
-  if(records.length===0){ alert('Žádné záznamy k exportu!'); return;}
+  if(records.length===0){
+    alert('Žádné záznamy k exportu!');
+    return;
+  }
   const ws_data=[['Osoba','Datum','Práce','Hodiny','Komentář']];
-  records.forEach(r=>ws_data.push([r.person,r.date,r.tasks.join('; '),r.hours,r.comment]));
+  records.forEach(r=>ws_data.push([
+    r.person,r.date,r.tasks.join('; '),r.hours,r.comment
+  ]));
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(ws_data);
   XLSX.utils.book_append_sheet(wb,ws,'Záznamy');
   XLSX.writeFile(wb,'records.xlsx');
 });
+
+/* =========================
+   INIT
+========================= */
+updatePersonSelect();
+renderRecords();
 
 }); // DOMContentLoaded end
